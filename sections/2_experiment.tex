@@ -58,11 +58,104 @@
 
 \subsubsection{错误1}
 \begin{enumerate}[(1)]
-    \item 错误现象:\textcolor{red}{描述这个错误产生时的现象。}
-    \item 分析定位过程:\textcolor{red}{说清楚你碰到这个问题是如何分析定位出错原因的。可能你分析定位过程中经历了多轮尝试，把它们都记录下来。}
-    \item 错误原因:\textcolor{red}{给出一个出错原因的正式说明。}
-    \item 修正效果:\textcolor{red}{说明你修正这个错误的方法，并说明它是否有效。}
-    \item 归纳总结（可选）:\textcolor{red}{说说你觉得这个错误是哪种类型的，今后如何提前规避。}
+    \item 错误现象:\textcolor{black}{ CPU 功能测试 jr 报错}
+    \item 分析定位过程:\textcolor{black}{ 首先我们发现它一条 jump and link 类型的指令，它会导致 pc 的跳转, pc 跳转会和下图中的 7 个信号值有关，现在把这些信号值全部拉出来对比，查看哪一步信号值跳转出错。 从图中可以看到 JrD 信号为 1 时，alu 的计算结果还没有到达，所以这里需要阻塞一个周期的流水线，等待结果传入，然后由 ForwardAD进行数据前推。需要在 hazard 模块中添加一个阻塞信号 jrinstallD。
+}
+    \item 错误原因:\textcolor{black}{ 添加 jr 型指令后没有修改 hazard 模块，需要添加相关类型的阻塞信号}
+    \item 修正效果:\textcolor{black}{ 在添加了 jr 阻塞信号后，jr 指令阻塞了一个周期，获得了正确的数据前推值，完成了跳转。}
+    \item 归纳总结:\textcolor{black}{ 这个错误的出现是因为没有考虑到新加入的指令的冒险现象，由于经验较少，这类错误是无法避免的，只能在测试时及时发现，及时修改。}
 \end{enumerate}
 
 \subsubsection{错误2}
+\begin{enumerate}[(1)]
+    \item 错误现象:\textcolor{black}{CPU 功能测试 syscall 报错}
+    \item 分析定位过程:\textcolor{black}{先分析如下错误波形图：这里的第一次执行 syscall 指令，跳转到0xbfc00380 执行异常处理。异常处理的第一条指令是从 hilo 寄存器中取值到另外两个寄存器。但是这里出错了，从波形图可以看出，出错的原因在于在异常处理跳转过后，hilo 寄存器的值被覆盖了，所以在这里需要为我们的 hilo 寄存器添加一个接口，用于阻塞 hilo 寄存器。
+}
+     \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=\textwidth]{image/wave1.png}
+        \caption{错误的波形图}
+    \end{figure}
+    
+    \item 错误原因:\textcolor{black}{异常处理时hilo 寄存器没有被阻塞，导致值被刷新覆盖了。}
+    \item 修正效果:\textcolor{black}{错误修改后的波形图如下所示：}
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=\textwidth]{image/wave2.png}
+        \caption{错误修改后的波形图}
+    \end{figure}
+\end{enumerate}
+
+\subsubsection{错误3}
+\begin{enumerate}[(1)]
+    \item 错误现象:\textcolor{black}{综合阶段出现下面错误：
+    [Place 30-4] Design utilization is very high. Run report\_utilization command to see design utilization}
+    
+    \item 分析定位过程:\textcolor{black}{这个bFPGA或ASIC设计的放置阶段，表示设计的资源利用率过高，导致放置操作不太可能成功}
+    \item 错误原因:\textcolor{black}{二路组相联cache 消耗资源比直接映射大导致实现阶段实现不了}
+    \item 修正效果:\textcolor{black}{资源消耗过大}
+    \item 归纳总结:\textcolor{black}{使用普通的写回cache 即可}
+\end{enumerate}
+
+\subsubsection{错误4}
+\begin{enumerate}[(1)]
+    \item 错误现象:\textcolor{black}{两路组相联写回cache 一个组里只有第一个缓存行会存数据，另外一个一直为未知值，错误如下图所示。}
+    
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=\textwidth]{image/errorcache.png}
+        \caption{cache错误波形图}
+    \end{figure}
+    
+    \item 分析定位过程:\textcolor{black}{写入 cache 时判断一组内两个缓存行是否有数据或者是否命中的逻辑出现问题}
+    \item 错误原因:\textcolor{black}{判断逻辑出错}
+    \item 修正效果:\textcolor{black}{修改代码后正确效果如下图所示：}
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=\textwidth]{image/cachesuccess.png}
+        \caption{cache正确波形图}
+    \end{figure}
+\end{enumerate}
+
+\subsubsection{错误5}
+\begin{enumerate}[(1)]
+    \item 错误现象:\textcolor{black}{功能测试 CP0 报错}
+    \item 分析定位过程:\textcolor{black}{先来看错误的波形图,波形图中可以看到出现问题的原因是刷新信号提前出现了，在下个周期到来了之前，cp0 已经写入了 PCM 的值，导致需要的 PCM 的值比预期的少 4。这是由于 stall\_all 信号并没有暂停 cp0 的工作，现在需要给 cp0也接入阻塞信号，阻塞它在等待访存数据阶段的写入操作。}
+    
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.65\textwidth]{image/wave3.png}
+        \caption{错误的波形图}
+    \end{figure}
+    
+    \item 错误原因:\textcolor{black}{cp0 没有接入控制冒险。}
+    \item 修正效果:\textcolor{black}{修改过后正确的结果如下所示：}
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.65\textwidth]{image/wave4 (2).png}
+        \caption{错误修改后的波形图}
+    \end{figure}
+\end{enumerate}
+
+\subsubsection{错误6}
+\begin{enumerate}[(1)]
+    \item 错误现象:\textcolor{black}{功能测试 bfc423a8: 269423ac addiu s4,s4,9132 报错。}
+    \item 分析定位过程:\textcolor{black}{出问题的指令是异常处理的第一条指令，出现异常的原因是在异常处理的时候如果阻塞了信号，会刷新所有流水线寄存器，导致结果指令丢失。}
+    \item 错误原因:\textcolor{black}{在异常处理的时候如果阻塞了信号，会刷新所有流水线寄存器，导致结果指令丢失。}
+    \item 修正效果:\textcolor{black}{在所有的刷新信号上和∼stall\_all 做与运算，这样就可以在阻塞时不刷新流水线寄存器。}
+\end{enumerate}
+
+\subsubsection{错误7}
+\begin{enumerate}[(1)]
+    \item 错误现象:\textcolor{black}{功能测试 bfc3a8cc: 0000a812 mflo s5 报错}
+    \item 分析定位过程:\textcolor{black}{先来分析错误的波形图：从图中可以看到 hilo 寄存器的值在 EX 级就可以取到了，之后步步提前了一个周期，导致错误。既然提前了一个周期，那么可以放入流水线寄存器中多存一个周期，就可以得到正确的结果了。}
+    
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=\textwidth]{image/wave5.png}
+        \caption{错误的波形图}
+    \end{figure}
+    
+    \item 错误原因:\textcolor{black}{hilo 寄存器没有被 stall\_all 信号阻塞。}
+    \item 修正效果:\textcolor{black}{在流水线寄存器中多存一个周期，就可以得到正确的结果。}
+\end{enumerate}

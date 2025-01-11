@@ -513,12 +513,31 @@ c) 完成处理：
 \label{fig:enter-label}
 \end{figure}
 \begin{flushleft}
+
+\newpage
 \subsection{ Cache设计}
 \subsubsection{DCache设计}
+\textcolor{black}{本次项目设计实现了写回策略的数据Cache, 并在此基础上实现了二路组相联的写回cache。但由于资源有限，使用二路组相联的性能相较于直接映射的方式更差。所以最终采用的是直接映射的写回cache。}
+\item 状态转移设计：总共有三个状态 空闲状态，访问内存，写入内存。具体的状态转移如下：
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{image/FSM.png}
+    \caption{FSM}
+\end{figure}
+
+\item 数据更新的策略：在读内存完成后，写命中或者写缺失后读内存完成需要更新 cache 里的数据。具体实现如下图所示：
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/cacheR.png}
+    \caption{数据更新}
+\end{figure}
+
+\newpage
 \subsubsection{ICache设计}
+\textcolor{black}{指令 Cache 由数据Cache 去除写操作逻辑直接得到, 因此不再过多的叙述。}
 \end{flushleft}
-
 
 
 \begin{flushleft}

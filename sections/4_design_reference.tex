@@ -1,2 +1,12 @@
 \section{参考设计说明}
-\textcolor{red}{如果在提交设计中使用了第三方IP或者借鉴了他人的部分源代码，请在此处逐一列举，并说明出处。所谓“借鉴”是指从模块划分、接口定义、数据通路结构、状态机、关键信号含义这些方面均与原设计存在较高的相似度。}
+\textcolor{black}{1.项目的整体设计思路和方向主要参考了重庆大学硬件综合设计实验文档https://co.ccslab.cn/。\\
+	2.MIPS设计的57条指令均采用参考资料文档中的A03\_“系统能力培养大赛”MIPS指令系统规范\_v1.01\cite{A03_“系统能力培养大赛”MIPS指令系统规范_v1.01}以及指令及对应机器码\_2018\cite{指令及对应机器码_2018}。\\
+	3.数据通路在参考资料中的原始数据通路图\_2018\cite{原始数据通路图_2018}上加以改进。\\
+	4.除法器、hilo寄存器、宏定义等使用了资料提供的div.v 、hilo\_reg.v 以及defines2.vh文件。\\
+	5.cp0 协处理器参考了资料包中提供的cp0\_reg.v文件 。\\
+	6.地址映射模块mmu使用了资料包中提供的mmu.v文件 。\\
+	7.类sram接口设计参考了计算机组成与结构课程实验5的资料包cache\_lab\_v0.06.rar 中的sram\_to\_sram\_like 转接口，使用了龙芯提供的axi\_interface 相关文件。\\
+	8.Cache设计使用了先前计算机组成与设计中Cache实验的全相联写回DCache和正常ICache，并做出了部分优化。\\
+	9.Hazard模块设计主要参考了计算机组成与设计课程教材\cite{计算机组成与设计：硬件/软件接口（原书第五版）}。\\
+	10.部分代码的完善和更新，例如数据通路中流水线的暂停与刷新等参考了github上的学长代码
+	\href{https://github.com/Soorraw/CQU-CS-Hardware-Design}{Soorraw/CQU-CS-Hardware-Design: 重庆大学硬件综合设计\cite{CQU_CS_Hardware_Design}} ，在此做出感谢。}

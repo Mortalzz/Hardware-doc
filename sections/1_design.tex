@@ -1,9 +1,9 @@
 \section{设计方案}
 \subsection{总体设计思路}
 \textcolor{black}{本次硬件设计主要设计和完善了一个可以基于 AXI 总线协议运行的 SOC 系统。其中,系统内存 (Ram)、外设 (Confreg), 以及负责管理和仲裁上述从设备与处理器间的数据交互请求, 并进行数据传输的 AXI 1X2 Bridge 模块均已在课程资料包中提供。因此, 本次设计的主要目标是构建一个支持 AXI 协议的 MIPS32 架构的 CPU, 即下图1中的mycpu\_top模块。}
-\begin{figure}
+\begin{figure}[h]
 	\centering
-	\includegraphics[width=0.5\linewidth]{image/p14.png}
+	\includegraphics[width=0.25\linewidth]{image/p14.png}
 	\caption{SOC顶层结构图}
 	\label{fig:enter-label}
 \end{figure}
@@ -15,9 +15,9 @@
 高速缓存Cache：旨在弥补CPU与内存之间的速度差异，由指令缓存InstCache和数据缓存DataCache两部分构成。\\
 桥Bridge 2x1：是Bridge 1x2的逆向工程。与Bridge 1x2不同，Bridge 2x1在某一时刻可能会同时接收到数据Cache发起的内存访问请求和CPU发出的外设访问请求，其内部仲裁策略为优先处理内存访问请求。\\
 AXI接口AXInterface：mycpu\_top内部采用类SRAM方式实现数据交互，所有对外的类SRAM请求均由AXI接口统一转换为AXI请求，同时AXI接口会将外层返回的数据重新转换为类SRAM格式供内层模块使用，其内部仲裁策略为优先指令访问\\。
-\begin{figure}
+\begin{figure}[h]
 	\centering
-	\includegraphics[width=0.5\linewidth]{image/p15.png}
+	\includegraphics[width=0.25\linewidth]{image/p15.png}
 	\caption{CPU顶层结构图}
 	\label{fig:enter-label}
 \end{figure}
@@ -61,14 +61,14 @@ DatapPath作为CPU功能单元的集合，主要包括数据在各个功能部�
 \end{itemize}
 \end{itemize}
 
-\begin{figure}
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.5\linewidth]{image/p2.png}
 \caption{DivFree状态逻辑处理}
 \label{fig:enter-label}
 \end{figure}
 
-\begin{table}
+\begin{table}[h]
 \centering
 \begin{tabular}{|c|c|} \hline 
 	start\_i\& 开始除法运算\\ \hline 
@@ -82,18 +82,18 @@ DatapPath作为CPU功能单元的集合，主要包括数据在各个功能部�
 
 除法完成后，结果通过result\_o输出，在数据通路中根据hilowrite信号 将高32位（即余数）存储在HI寄存器中，将低32位（即商）存储在LO寄存器中
 
-\begin{figure}
+\begin{figure}[h]
 \centering
-\includegraphics[width=0.5\linewidth]{image/p3.png}
+\includegraphics[width=0.25\linewidth]{image/p3.png}
 \caption{HILO寄存器}
 \label{fig:enter-label}
 \end{figure}
 
 \textbf{Eqcmp}:位于ID级的分支比较模块。由于在实验四中仅实现了了beq指 令,分支跳信号PCSrc当且仅当比较数A和B相等时有效。 而扩展后的57条指令中含有八条分支跳转指令，因此需要通过检测ID级指令的op和rt字段以识别指令类型 。
 
-\begin{figure}
+\begin{figure}[h]
 \centering
-\includegraphics[width=0.5\linewidth]{image/p4.png}
+\includegraphics[width=0.25\linewidth]{image/p4.png}
 \caption{Eqcmp模块}
 \label{fig:enter-label}
 \end{figure}
@@ -109,7 +109,7 @@ DatapPath作为CPU功能单元的集合，主要包括数据在各个功能部�
 各异常的含义,产生的流水级和原因如下表2所示,按处理的优先级从上到下排序:
 
 
-\begin{table}
+\begin{table}[h]
 \centering
 \begin{tabular}{|c|c|c|c|} \hline 
 	异常名称&  产生流水线&  异常描述& 异常原因\\ \hline 
@@ -129,7 +129,7 @@ DatapPath作为CPU功能单元的集合，主要包括数据在各个功能部�
 \textbf{CP0}：位于MEM级，包含的各寄存器类型如下表3：
 
 
-\begin{table}
+\begin{table}[h]
 \centering
 \begin{tabular}{|c|c|} \hline 
 	寄存器名称& 功能\\ \hline 
@@ -143,13 +143,13 @@ DatapPath作为CPU功能单元的集合，主要包括数据在各个功能部�
 \label{tab:my_label}
 \end{table}
 
-\begin{figure}
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.5\linewidth]{image/P6.png}
 \caption{Status寄存器}
 \label{fig:enter-label}
 \end{figure}
-\begin{figure}
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.5\linewidth]{image/P7.png}
 \caption{Cause寄存器}
@@ -164,7 +164,7 @@ DatapPath作为CPU功能单元的集合，主要包括数据在各个功能部�
 \textbf{BadVAddr 寄存器处理}: 当且仅当异常类型为地址异常时,向BadVAddr寄存器 中写入错误地址。
 
 \textbf{EPC寄存器处理}:当异常指令不是延迟槽指令时,EPC中写入该指令的PC地 址,以便异常处理程序返回后重现从该指令继续运行;当异常指令是延迟槽指 令时,EPC中写入的是延迟槽指令的上一条指令,即分支跳转指令的PC地址。 因为跳转后的程序在异常处理开始前尚未执行,因此异常处理完成后需要重新 从此处开始执行。 
-\begin{figure}
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.5\linewidth]{image/p8.png}
 \caption{部分异常处理逻辑}

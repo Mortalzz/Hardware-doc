@@ -22,7 +22,9 @@ AXI接口AXInterface：mycpu\_top内部采用类SRAM方式实现数据交互，�
 	\label{fig:enter-label}
 \end{figure}
 \subsection{MIPS模块设计\textcolor{black}{}}
-本次课程设计的核心是基于MIPS架构的五级流水线CPU。控制模块Controller、数据通路Datapath以及冒险控制模块HazardUnit在实验四时已基本搭建完成，在此次设计里需对它们进行必要的功能调整和拓展，从而确保能顺利执行前面提到的全部57条指令。类SRAM接口Sramlike是此次课程设计新引入的功能模块，其主要职责是把CPU发出的数据请求从SRAM格式转换为类SRAM格式，以便与外部模块进行更高效的数据交互。}
+
+本次课程设计的核心是基于MIPS架构的五级流水线CPU。控制模块Controller、数据通路Datapath以及冒险控制模块HazardUnit在实验四时已基本搭建完成，在此次设计里需对它们进行必要的功能调整和拓展，从而确保能顺利执行前面提到的全部57条指令。类SRAM接口Sramlike是此次课程设计新引入的功能模块，其主要职责是把CPU发出的数据请求从SRAM格式转换为类SRAM格式，以便与外部模块进行更高效的数据交互。
+
 \subsubsection{DataPath模块设计}
 DatapPath作为CPU功能单元的集合，主要包括数据在各个功能部件的传输路径。而PC寄存器、寄存器堆Regfile、符号扩展与触发器 等部件无需更改，ALU仅需针对部分新增指令进行微小调整，不再此处进行赘述。因而下面将重点阐述这几个模块：DIV与HILO、Eqcmp(用于分支指令比较）、CP0与ExceptionType。
 
@@ -69,10 +71,10 @@ DatapPath作为CPU功能单元的集合，主要包括数据在各个功能部�
 \begin{table}
 \centering
 \begin{tabular}{|c|c|} \hline 
-	start_i& 开始除法运算\\ \hline 
-	annul_i& 取消当前除法\\ \hline 
-	ready_o& 除法完成标志\\ \hline 
-	signed_div_i& 有符号除法标志\\ \hline
+	start\_i\& 开始除法运算\\ \hline 
+	annul\_i\& 取消当前除法\\ \hline 
+	ready\_o\& 除法完成标志\\ \hline 
+	signed\_div\_i\& 有符号除法标志\\ \hline
 \end{tabular}
 \caption{关键控制信号}
 \label{关键控制信号}
@@ -168,14 +170,106 @@ DatapPath作为CPU功能单元的集合，主要包括数据在各个功能部�
 \caption{部分异常处理逻辑}
 \label{fig:enter-label}
 \end{figure}
+
 \subsubsection{Hazard模块设计}
-%写在此处
+冒险控制模块。该模块的大部分实现与实验四一致, 此处重点阐述需要进行修改或添加的部分。
+
+\textbf{longest\_stall:}
+这是最长暂停信号，由指令存储器、数据存储器或除法引起，当出现取址或访存指令时，我们需要暂停整个流水线，因为内存的访问时间开销大，全流水线必须阻塞，等待上述过程执行完成。同理，由于除法器需要36个CPU周期时间来完成除法运算，于是同样阻塞全流水线，等待除法过程完毕。
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{image/hazard1.png}
+\caption{最长暂停信号}
+\label{fig:enter-label}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{image/hazard2.png}
+\caption{流水线暂停逻辑}
+\label{fig:enter-label}
+\end{figure}
+
+\textbf{ForwardaE\&ForwardbE:}
+这是执行级前推信号，用于ALU运算.代码通过两个2位的控制信号forwardaE和forwardbE来控制数据前推。当执行阶段的指令需要使用之前指令的结果时，系统会检查源寄存器号（rsE和rtE）是否与访存阶段（M）或写回阶段（W）的目标寄存器号匹配。如果匹配且对应阶段的寄存器写使能信号有效，就会触发相应的数据前推。具体来说，如果与访存阶段匹配，则设置前推信号为2'b10；如果与写回阶段匹配，则设置为2'b01。这种机制优先从访存阶段前推，其次是写回阶段，并且只有当源寄存器号不为0时才进行前推（因为0号寄存器永远为0）。
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\linewidth]{image/hazard3.png}
+\caption{执行级数据前推}
+\label{fig:enter-label}
+\end{figure}
+
+\textbf{ForwardaD\&ForwardbD:}
+这是译码级数据前推信号，用于分支判断.代码通过两个1位的控制信号forwardaD和forwardbD来控制数据前推。当译码阶段的分支判断需要使用之前指令的结果时，系统会检查源寄存器号（rsE和rtE）是否与访存阶段（M）的目标寄存器号匹配。如果匹配且对应阶段的寄存器写使能信号有效，就会触发相应的数据前推。具体来说，如果匹配，则设置前推信号为1'b1。
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{image/hazard9.png}
+\caption{译码级数据前推}
+\label{fig:enter-label}
+\end{figure}
+
+\textbf{forwardhiloE：}
+该信号用于实现HI/LO寄存器的数据前推逻辑，主要用于处理乘除法指令的结果前推。当执行阶段的指令是MFHI（从HI寄存器读取）或MFLO（从LO寄存器读取）指令时（由alucontrolE信号判断），系统会检查访存阶段和写回阶段是否有对HI/LO寄存器的写操作（通过hilo\_weM和hilo\_weW信号判断）。如果访存阶段有HI/LO寄存器写操作，则设置前推信号forwardhiloE为2'b10进行访存级前推；如果写回阶段有HI/LO寄存器写操作，则设置为2'b01进行写回级前推。
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{image/hazard4.png}
+\caption{HI/LO寄存器数据前推}
+\label{fig:enter-label}
+\end{figure}
+
+\newpage
+\textbf{lwstallD:}
+用于标记lw与sw指令后的数据冒险，使得D与F阶段流水线暂停以等待数据就绪
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{image/hazard5.png}
+\caption{Load-use数据冒险}
+\label{fig:enter-label}
+\end{figure}
+
+\textbf{jrstallD:}
+用于标记寄存器跳转时的出现的寄存器跳转冒险,使得D与F阶段流水线暂停以等待数据就绪
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{image/hazard6.png}
+\caption{寄存器跳转冒险}
+\label{fig:enter-label}
+\end{figure}
+
+\textbf{branchstallD：}
+实现分支指令的数据冒险检测逻辑，通过branchstallD信号来判断当前译码阶段的分支指令（branchD）是否依赖于前面指令的运算结果：如果执行阶段有写寄存器操作（regwriteE）或访存阶段有访存写寄存器操作（memtoregM），且这些指令的目标寄存器（writeregE或writeregM）与分支指令的源操作数寄存器（rsD或rtD）相匹配，则需要产生流水线停顿信号以等待数据就绪。
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{image/hazard10.png}
+\caption{分支冒险}
+\label{fig:enter-label}
+\end{figure}
+
+\newpage
+\textbf{jrb\_l\_astallD\&jrb\_l\_bstallD：}
+实现Load指令后跟跳转/分支指令时的冒险检测逻辑，通过jrb\_l\_astallD和jrb\_l\_bstallD信号来检测当前译码阶段的跳转/分支指令（jrD|branchD）是否依赖于前面执行阶段或访存阶段的Load指令的结果（由memtoregE和memtoregM表示），其中分别检查源寄存器rsD和rtD是否与Load指令的目标寄存器（writeregE或writeregM）相匹配，如果匹配则需要流水线停顿以等待Load指令完成。
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{image/hazard7.png}
+\caption{Load指令后的跳转/分支冒险}
+\label{fig:enter-label}
+\end{figure}
+
+\textbf{flush\_x：}
+因异常引起的流水线刷新逻辑，通过flushF、flushD、flushE、flushM和flushW信号来控制不同阶段的流水线刷新；当在访存阶段发生异常（flush\_exceptionM不为0）时，取指令阶段（F）、译码阶段（D）、访存阶段（M）和写回阶段（W）都会被刷新，而在执行阶段（E）则在发生Load指令数据冒险、分支指令数据冒险或Load指令后跟跳转/分支指令时（且不处于最长暂停状态）也会触发刷新，这样可以确保在异常发生时流水线中的指令能够被正确处理，避免错误执行。
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{image/hazard8.png}
+\caption{异常引起的流水线刷新}
+\label{fig:enter-label}
+\end{figure}
+
 \subsubsection{Controller模块设计}
 
 CPU的主控制单元,包含主控制译码器Maindec、ALU控制译码器Aludec以及流水线寄 存器的控制信号部分,整体架构与实验四中完全一致。在此基础上,添加了若干新的控制信号,并对流水线进行了相应调整。由于Aludec和流水线寄存器的工作过程相较于实验 四基本没有变化,只是简单的堆砌新的对应关系,因此不再赘述。此处重点阐述Maindec 模块所产生的各控制信号含义及其解析过程。 
 
 
-\begin{table}
+\begin{table}[h]
 \centering
 \begin{tabular}{|c|c|c|} \hline 
 	信号名&  位宽& 功能描述\\ \hline 
@@ -185,14 +279,14 @@ CPU的主控制单元,包含主控制译码器Maindec、ALU控制译码器Aludec
 	立即数符号扩展\\ \hline 
 	memtoreg&  1-bit& 内存到寄存器的数据选择信号，决定写回寄存器的数据是来自内存还是ALU结果\\ \hline 
 	extop&  1-bit& 立即数扩展方式选择信号，控制立即数是进行符号扩展还是零扩展\\ \hline 
-	hilo_we&  2-bit& HI、LO寄存器写使能信号，用于乘除法运算结果的存储\\ \hline 
+	hilo\_we&  2-bit& HI、LO寄存器写使能信号，用于乘除法运算结果的存储\\ \hline 
 	branch&  1-bit& 分支指令控制信号，表示当前指令是否为分支指令\\ \hline 
 	jump&  1-bit& 跳转指令控制信号，表示当前指令是否为跳转指令\\ \hline 
 	jr&  1-bit& 寄存器跳转控制信号，用于jr（跳转到寄存器）类指令\\ \hline 
 	al& 1-bit&链接跳转控制信号，用于需要保存返回地址的跳转指令\\ \hline 
 	jalr& 1-bit&寄存器链接跳转控制信号，用于jalr指令\\ \hline 
-	cp0_we& 1-bit&CP0协处理器写使能信号\\ \hline 
-	cp0_re& 1-bit&CP0协处理器读使能信号\\ \hline 
+	cp0\_we& 1-bit&CP0协处理器写使能信号\\ \hline 
+	cp0\_re& 1-bit&CP0协处理器读使能信号\\ \hline 
 	invaild& 1-bit&非法指令标志，表示当前指令是否为非法指令\\ \hline 
 	aluiop& 4-bit&ALU操作码，控制ALU执行什么样的运算\\ \hline
 \end{tabular}
@@ -364,7 +458,7 @@ i\_sram\_to\_sram\_like（指令接口转换）：
 \end{itemize}
 \item 关键特性：i\_sram\_to\_sram\_like与d\_sram\_to\_sram\_like的共同点在于都采用了握手协议以实现可靠传输以及采用缓冲机制以处理速度不匹配问题。但d\_sram需要处理读写操作，更复杂
 \end{enumerate}
-\end{itemize}
+%\end{itemize}
 \begin{figure}
 \centering
 \includegraphics[width=0.5\linewidth]{image/P11.png}
